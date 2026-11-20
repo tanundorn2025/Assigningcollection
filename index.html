@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>วิเคราะห์การจ่ายงานจัดเก็บลงพื้นที่ รายพนักงาน × อำเภอ</title>
+<style>
+:root{--font-anthropic-sans:'Sarabun','Noto Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;--font-anthropic-serif:'Sarabun','Noto Sans Thai',Georgia,serif;
+--color-fg:#1f2328;--color-fg-muted:#5b616a;--color-bg:#fff;--color-panel:#fafbfc;--color-border-line:#d9dde2;
+--cds-font-size-title:28px;--cds-font-size-heading:18px;--cds-font-size-body:15px;--cds-font-size-caption:13px;--cds-font-weight-medium:600;
+--cds-gap-xs:4px;--cds-gap-sm:8px;--cds-gap-md:12px;--cds-gap-lg:16px;--cds-gap-xl:28px;--cds-pad-md:12px;--cds-pad-lg:16px;--cds-radius:8px;
+--cds-text-secondary:#4a5058;--cds-chart-muted:#c5cbd2;--cds-chart-reference:#7d848c;--cds-surface-popover:#fff;--cds-border:#d0d5db;--cds-shadow-popover:0 4px 12px rgba(0,0,0,.15)}
+body{margin:0;padding:24px;background:var(--color-bg);color:var(--color-fg);font-family:var(--font-anthropic-sans);font-size:var(--cds-font-size-body)}
+.dash-select{font:inherit;padding:4px 8px;border:1px solid var(--color-border-line);border-radius:6px;background:var(--color-panel);color:var(--color-fg)}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+<body>
+<style>
+.wl{font-family:var(--font-anthropic-sans);color:var(--color-fg);max-width:1100px;margin:0 auto}
+.wl h1{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);margin:0 0 var(--cds-gap-sm)}
+.wl h2{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);margin:var(--cds-gap-xl) 0 var(--cds-gap-xs)}
+.wl p{line-height:1.65;margin:0 0 var(--cds-gap-sm)}
+.wl .lede{font-size:var(--cds-font-size-heading);line-height:1.55}
+.wl .sub{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)}
+.wl b.v{font-weight:var(--cds-font-weight-medium);font-variant-numeric:tabular-nums}
+.wl-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--cds-gap-md);margin:var(--cds-gap-lg) 0}
+.wl-kpi{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-md) var(--cds-pad-lg)}
+.wl-kpi .k{display:block;font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);margin-bottom:4px}
+.wl-kpi .n{font-family:var(--font-anthropic-serif);font-size:30px;font-variant-numeric:tabular-nums}
+.wl-kpi .u{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);margin-left:4px}
+.wl-card{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-lg);margin:var(--cds-gap-md) 0}
+.wl-chart{position:relative;min-height:120px;width:100%}
+.wl-grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--cds-gap-md)}
+.wl-tip{position:absolute;display:none;pointer-events:none;white-space:pre-line;font-size:var(--cds-font-size-caption);background:var(--cds-surface-popover);border:1px solid var(--cds-border);box-shadow:var(--cds-shadow-popover);color:var(--cds-text-secondary);border-radius:6px;padding:6px 8px;z-index:5;max-width:240px}
+.wl-scroll{overflow-x:auto}
+.wl table{border-collapse:collapse;width:100%;font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums}
+.wl th,.wl td{padding:6px 8px;border-bottom:1px solid var(--color-border-line);text-align:left;white-space:nowrap}
+.wl th{color:var(--color-fg-muted);font-weight:var(--cds-font-weight-medium);vertical-align:bottom;white-space:normal}
+.wl td.num,.wl th.num{text-align:right}
+.wl .tall{max-height:420px;overflow:auto}
+.wl ul{margin:0 0 var(--cds-gap-sm);padding-left:1.2em;line-height:1.65}
+.wl li{margin-bottom:6px}
+.wl svg text{font-family:var(--font-anthropic-sans)}
+.wl{--wl-acc:var(--wl-accent,var(--wl-base,#3b6ea5))}
+.wl h2{border-left:4px solid var(--wl-acc);padding-left:10px}
+.wl-kpi .n{color:var(--wl-acc)}
+.wl th{border-bottom:2px solid var(--wl-acc)}
+.wl-theme{display:flex;align-items:center;gap:8px;margin:0 0 var(--cds-gap-md);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.wl-sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 12px;background:var(--wl-acc)}
+.wl-sw.s2{opacity:.55}.wl-sw.s3{opacity:.25}
+.wl-t-light,.wl-t-ocean,.wl-t-forest,.wl-t-sunset,.wl-t-violet,.wl-t-rose,.wl-t-gold,.wl-t-mono{--color-fg:#1f2328;--color-fg-muted:#5b616a;--color-panel:#fff;--color-border-line:#d9dde2;--color-bg:var(--wl-tint);--cds-text-secondary:#4a5058;--cds-chart-muted:#c5cbd2;--cds-chart-reference:#7d848c;--cds-surface-popover:#fff;--cds-border:#d0d5db;background:var(--wl-tint);padding:16px;border-radius:12px}
+.wl-t-light{--wl-accent:#2f6fdb;--wl-tint:#f6f7f9}
+.wl-t-ocean{--wl-accent:#1f6fb2;--wl-tint:#eaf3fb}
+.wl-t-forest{--wl-accent:#2e7d4f;--wl-tint:#eaf6ee}
+.wl-t-sunset{--wl-accent:#d9623b;--wl-tint:#fdf0e8}
+.wl-t-violet{--wl-accent:#7a52c7;--wl-tint:#f1ecfa}
+.wl-t-rose{--wl-accent:#c2406b;--wl-tint:#fbeaf0}
+.wl-t-gold{--wl-accent:#b7860b;--wl-tint:#fbf5e3}
+.wl-t-mono{--wl-accent:#444;--wl-tint:#f0f0f0}
+.wl-t-dark{--wl-accent:#6cb6ff;--color-fg:#ece9e2;--color-fg-muted:#a9a69e;--color-panel:#1e2225;--color-border-line:#3b4248;--cds-text-secondary:#c3c0b8;--cds-chart-muted:#4a5258;--cds-chart-reference:#8a9096;--cds-surface-popover:#2a2f33;--cds-border:#4a5258;background:#14171a;padding:16px;border-radius:12px}
+</style>
+<div class="wl">
+<h1 id="title">วิเคราะห์การจ่ายงานจัดเก็บลงพื้นที่ รายพนักงาน × อำเภอ</h1>
+<div class="wl-theme"><label for="themeSel">ธีม</label><select class="dash-select" id="themeSel" aria-label="เลือกธีมสี"><option value="">ค่าเริ่มต้น</option><option value="light">สว่าง (ขาว)</option><option value="ocean">สว่าง · ทะเล (ฟ้า)</option><option value="forest">สว่าง · ป่า (เขียว)</option><option value="sunset">สว่าง · พระอาทิตย์ตก (ส้ม)</option><option value="violet">สว่าง · ม่วง</option><option value="rose">สว่าง · กุหลาบ (ชมพู)</option><option value="gold">สว่าง · ทอง</option><option value="mono">สว่าง · โมโนโครม</option><option value="dark">มืด</option></select></div>
+<p class="lede" id="lede">พนักงานจัดเก็บ <b class="v" data-draw="val" data-source="summary" data-field="nEmp">—</b> คน รับผิดชอบ <b class="v" data-draw="val" data-source="summary" data-field="total">—</b> สัญญา ใน <b class="v" data-draw="val" data-source="summary" data-field="nDist">—</b> อำเภอ แต่ภาระงานของคนที่รับมากสุดต่างจากคนที่รับน้อยสุดถึง <b class="v" data-draw="val" data-source="summary" data-field="ratio">—</b> เท่า และเกือบครึ่งของอำเภอมีพนักงานหลายคนลงซ้ำกัน</p>
+<p class="sub">นับจำนวนสัญญา (ไม่ใช่มูลค่าหรือระยะทาง) ถอดจากตารางต้นฉบับ ยอดรวมรายคนและรวมทั้งหมดตรงกับตารางเดิม</p>
+
+<div class="wl-kpis" id="kpis">
+<div class="wl-kpi"><span class="k">สัญญาทั้งหมด</span><b class="n" data-draw="val" data-source="summary" data-field="total">—</b></div>
+<div class="wl-kpi"><span class="k">ค่าเฉลี่ยต่อคน</span><b class="n" data-draw="val" data-source="summary" data-field="avg">—</b></div>
+<div class="wl-kpi"><span class="k">คนมากสุด ÷ น้อยสุด</span><b class="n" data-draw="val" data-source="summary" data-field="ratio">—</b><span class="u">เท่า</span></div>
+<div class="wl-kpi"><span class="k">อำเภอที่ลง ≥3 คนซ้อนกัน</span><b class="n" data-draw="val" data-source="summary" data-field="overlapPct">—</b><span class="u">%</span></div>
+<div class="wl-kpi"><span class="k">อำเภอเล็ก (≤5 สัญญา)</span><b class="n" data-draw="val" data-source="summary" data-field="tailN">—</b><span class="u">อำเภอ</span></div>
+</div>
+
+<h2 id="h-load">1) ภาระงานไม่สมดุล</h2>
+<p><b class="v" data-draw="val" data-source="summary" data-field="maxName">—</b> รับ <b class="v" data-draw="val" data-source="summary" data-field="maxJobs">—</b> สัญญา (<b class="v" data-draw="val" data-source="summary" data-field="maxVsAvg">—</b>% จากค่าเฉลี่ย) ส่วน <b class="v" data-draw="val" data-source="summary" data-field="minName">—</b> รับ <b class="v" data-draw="val" data-source="summary" data-field="minJobs">—</b> สัญญา (<b class="v" data-draw="val" data-source="summary" data-field="minVsAvg">—</b>%) สองคนที่งานมากที่สุดถือรวมกัน <b class="v" data-draw="val" data-source="summary" data-field="topTwoShare">—</b>% ของงานทั้งหมด</p>
+<div class="wl-card"><div class="wl-chart" id="chart-load" data-draw="barEmp" data-source="byEmp summary">—</div></div>
+
+<h2 id="h-heat">2) ใครลงอำเภอไหน: 12 อำเภอที่งานมากที่สุด</h2>
+<p>12 อำเภอแรกรวมกันคิดเป็นสัดส่วนส่วนใหญ่ของงาน แต่หลายอำเภอมีพนักงานหลายคนแบ่งกันถือ เช่น เมืองนครราชสีมา ที่ลงกันครบทั้ง 5 คน ขณะที่ด่านขุนทด ปากช่อง สีคิ้ว มีเจ้าของหลักชัดเจน</p>
+<div class="wl-card"><div class="wl-chart" id="chart-heat" data-draw="heat" data-source="jobs byEmp byDist">—</div></div>
+
+<h2 id="h-emp">3) ตัวชี้วัดรายพนักงาน</h2>
+<div class="wl-card wl-scroll"><table id="tbl-emp" data-source="byEmp" data-row-key="employee">
+<thead><tr><th data-field="employee">พนักงาน</th><th class="num" data-field="jobs">สัญญา</th><th class="num" data-field="vsAvg">เทียบค่าเฉลี่ย (%)</th><th class="num" data-field="districts">จำนวนอำเภอ</th><th class="num" data-field="jobsPerDistrict">สัญญาต่ออำเภอ</th><th class="num" data-field="top3Share">3 อำเภอแรก (% ของงานตน)</th><th data-field="topDistrict">อำเภอหลัก</th><th class="num" data-field="topShare">อำเภอหลัก (%)</th><th class="num" data-field="tailDistricts">อำเภอที่ลง ≤2 สัญญา</th><th class="num" data-field="tailJobs">สัญญาในอำเภอเหล่านั้น</th></tr></thead>
+<tbody data-draw="empRows"></tbody></table></div>
+<p class="sub">คนที่งานมากมักกระจายหลายอำเภอและมีอำเภอที่ลงเพียง 1–2 สัญญาจำนวนมาก (หางยาว) ส่วนคนที่งานน้อยมีพื้นที่กระจุกกว่า</p>
+
+<h2 id="h-overlap">4) การลงซ้ำซ้อนในอำเภอเดียวกัน</h2>
+<p><b class="v" data-draw="val" data-source="summary" data-field="overlapN">—</b> จาก <b class="v" data-draw="val" data-source="summary" data-field="nDist">—</b> อำเภอ มีพนักงานตั้งแต่ 3 คนลงพื้นที่ และ <b class="v" data-draw="val" data-source="summary" data-field="owners5">—</b> อำเภอมีครบทั้ง 5 คน โดยมี <b class="v" data-draw="val" data-source="summary" data-field="smallMulti">—</b> อำเภอที่งานรวมไม่เกิน 15 สัญญา แต่ต้องส่งพนักงาน 3 คนขึ้นไปไปลง ซึ่งเป็นการเดินทางซ้ำที่น่าจะรวมได้</p>
+<div class="wl-grid2">
+<div class="wl-card"><b>จำนวนอำเภอ แยกตามจำนวนพนักงานที่ลง</b><div class="wl-chart" id="chart-owners" data-draw="barOwners" data-source="owners">—</div></div>
+<div class="wl-card"><b>จำนวนอำเภอ แยกตามขนาดงานรวมของอำเภอ</b><div class="wl-chart" id="chart-size" data-draw="barSize" data-source="sizes">—</div></div>
+</div>
+<div class="wl-card"><b>อำเภอที่มีพนักงานลง ≥3 คน (เรียงตามงานรวม)</b>
+<div class="wl-scroll tall"><table id="tbl-overlap" data-source="byDist" data-row-key="district">
+<thead><tr><th data-field="district">อำเภอ</th><th class="num" data-field="total">สัญญารวม</th><th class="num" data-field="owners">จำนวนคนที่ลง</th><th data-field="topOwner">ผู้ถือมากสุด</th><th class="num" data-field="topShare">สัดส่วนผู้ถือมากสุด (%)</th><th data-field="ownersList">แบ่งงาน (คน สัญญา)</th></tr></thead>
+<tbody data-draw="overlapRows"></tbody></table></div></div>
+
+<h2 id="h-more">5) มุมมองเพิ่มเติม: การกระจุกตัว และโครงสร้างงานของแต่ละคน</h2>
+<div class="wl-grid2">
+<div class="wl-card"><b>Pareto: สัญญาสะสมตามอำเภอ</b><p class="sub">แท่ง = สัญญาของแต่ละอำเภอ (เรียงมาก→น้อย) เส้น = สัดส่วนสะสม เส้นประ = 80% ใช้ดูว่างานกระจุกกี่อำเภอ</p><div class="wl-chart" id="chart-pareto" data-draw="pareto" data-source="pareto">—</div></div>
+<div class="wl-card"><b>โครงสร้างงานแต่ละคน แยกตามขนาดอำเภอ</b><p class="sub"><span class="wl-sw"></span>อำเภอใหญ่ (&gt;50 สัญญา)<span class="wl-sw s2"></span>กลาง (6–50)<span class="wl-sw s3"></span>เล็ก (≤5) ใช้ดูว่าใครแบกงานหางยาวมากกว่ากัน</p><div class="wl-chart" id="chart-mix" data-draw="mix" data-source="mix">—</div></div>
+</div>
+
+<h2 id="h-find">6) ปัญหาที่สะท้อนจากข้อมูล</h2>
+<ul>
+<li><b>ภาระงานไม่สมดุล</b> งานกระจุกที่คนสองคน ขณะที่อีกสามคนต่ำกว่าหรือใกล้ค่าเฉลี่ย</li>
+<li><b>ไม่มีเจ้าของพื้นที่ที่ชัดเจน</b> อำเภอใหญ่ถูกแบ่งให้หลายคน (เช่น เมืองนครราชสีมา โชคชัย โนนไทย สีคิ้ว ลงครบ 5 คน) ทำให้ติดตามผลและแบ่งความรับผิดชอบยาก</li>
+<li><b>หางยาวของอำเภอเล็ก</b> <b class="v" data-draw="val" data-source="summary" data-field="tailN">—</b> อำเภอมีงานรวมไม่เกิน 5 สัญญา (รวม <b class="v" data-draw="val" data-source="summary" data-field="tailJobs">—</b> สัญญา หรือ <b class="v" data-draw="val" data-source="summary" data-field="tailPct">—</b>% ของงาน) ต้นทุนเดินทางต่อสัญญาสูง</li>
+<li><b>งานกระจุกในอำเภอหลัก</b> 10 อำเภอแรกถือ <b class="v" data-draw="val" data-source="summary" data-field="top10Share">—</b>% ของสัญญาทั้งหมด จึงควรวางกำลังคนตามความหนาแน่นของงาน</li>
+</ul>
+
+<h2 id="h-reco">7) ข้อเสนอแนะ</h2>
+<ul>
+<li><b>กำหนดเจ้าของหลักรายอำเภอ</b> อำเภอที่มีงานมาก ให้มีผู้รับผิดชอบหลัก 1–2 คน ลดการลงซ้ำของ 3–5 คน</li>
+<li><b>ปรับสมดุลภาระงาน</b> ย้ายงานจากผู้ที่เกินค่าเฉลี่ยไปยังผู้ที่ต่ำกว่า โดยเลือกอำเภอที่ผู้รับมีฐานพื้นที่อยู่แล้ว เพื่อไม่เพิ่มระยะเดินทาง</li>
+<li><b>รวมอำเภอหางยางเป็นรอบ</b> จัดรอบลงพื้นที่รายสัปดาห์หรือรายเดือนให้คนเดียวต่อกลุ่มอำเภอใกล้กัน แทนการแจกกระจายทุกคน</li>
+<li><b>ใช้ภาระงานแบบถ่วงน้ำหนัก</b> ตารางนี้นับจำนวนสัญญาอย่างเดียว ควรเพิ่มระยะทาง/เวลาเดินทาง มูลค่าค้างชำระ อายุหนี้ และผลการจัดเก็บ ก่อนตัดสินใจย้ายงานจริง</li>
+</ul>
+<p class="sub">ข้อมูล: ตาราง "จำนวนสัญญาที่พนักงานจัดเก็บรับผิดชอบ แยกตามอำเภอ" ที่ผู้ใช้ส่งมาเป็นภาพ ถอดตัวเลขใส่ไฟล์แนบ ตรวจยอดรวมรายคนตรงกับตารางเดิมทุกคน</p>
+</div>
+
+<script>
+const JOBS = [{"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "เกษตรวิสัย", "jobs": 1}, {"employee": "นายสุธน ตอทองหลาง", "district": "แก่งคอย", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "แก้งสนามนาง", "jobs": 2}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "แก้งสนามนาง", "jobs": 4}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "แก้งสนามนาง", "jobs": 5}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ขามทะเลสอ", "jobs": 1}, {"employee": "นายนฤดล จำปีกาง", "district": "ขามทะเลสอ", "jobs": 2}, {"employee": "นายสุธน ตอทองหลาง", "district": "ขามทะเลสอ", "jobs": 18}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ขามสะแกแสง", "jobs": 2}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ขามสะแกแสง", "jobs": 7}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ขามสะแกแสง", "jobs": 2}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "คง", "jobs": 21}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "คง", "jobs": 14}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "คง", "jobs": 13}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ครบุรี", "jobs": 26}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ครบุรี", "jobs": 3}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ครบุรี", "jobs": 3}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "จักราช", "jobs": 5}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "จักราช", "jobs": 15}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "จักราช", "jobs": 25}, {"employee": "นายนฤดล จำปีกาง", "district": "จัตุรัส", "jobs": 2}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "จัตุรัส", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "เฉลิมพระเกียรติ", "jobs": 10}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "เฉลิมพระเกียรติ", "jobs": 6}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "เฉลิมพระเกียรติ", "jobs": 7}, {"employee": "นายนฤดล จำปีกาง", "district": "ชัยบาดาล", "jobs": 10}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ชุมพวง", "jobs": 35}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ชุมพวง", "jobs": 42}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "โชคชัย", "jobs": 23}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "โชคชัย", "jobs": 4}, {"employee": "นายนฤดล จำปีกาง", "district": "โชคชัย", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "โชคชัย", "jobs": 6}, {"employee": "นายสุธน ตอทองหลาง", "district": "โชคชัย", "jobs": 3}, {"employee": "นายนฤดล จำปีกาง", "district": "ซับใหญ่", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ซับใหญ่", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ด่านขุนทด", "jobs": 3}, {"employee": "นายนฤดล จำปีกาง", "district": "ด่านขุนทด", "jobs": 79}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ด่านขุนทด", "jobs": 1}, {"employee": "นายสุธน ตอทองหลาง", "district": "ด่านขุนทด", "jobs": 15}, {"employee": "นายสุธน ตอทองหลาง", "district": "ท่าวังผา", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "เทพสถิต", "jobs": 1}, {"employee": "นายนฤดล จำปีกาง", "district": "เทพารักษ์", "jobs": 10}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "นาเชือก", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "นาเชือก", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "โนนแดง", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "โนนแดง", "jobs": 2}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "โนนไทย", "jobs": 4}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "โนนไทย", "jobs": 10}, {"employee": "นายนฤดล จำปีกาง", "district": "โนนไทย", "jobs": 2}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "โนนไทย", "jobs": 8}, {"employee": "นายสุธน ตอทองหลาง", "district": "โนนไทย", "jobs": 2}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "โนนสุวรรณ", "jobs": 2}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "โนนสูง", "jobs": 6}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "โนนสูง", "jobs": 42}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "โนนสูง", "jobs": 27}, {"employee": "นายสุธน ตอทองหลาง", "district": "โนนสูง", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "บรรพตพิสัย", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "บัวเชด", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "บัวลาย", "jobs": 2}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "บัวลาย", "jobs": 4}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "บัวใหญ่", "jobs": 4}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "บัวใหญ่", "jobs": 26}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "บัวใหญ่", "jobs": 21}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "บ้านกรวด", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "บ้านเหลื่อม", "jobs": 4}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "บ้านเหลื่อม", "jobs": 6}, {"employee": "นายนฤดล จำปีกาง", "district": "ป่าเหมี๊ยจณรงค์", "jobs": 2}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ประโคนชัย", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ประทาย", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ประทาย", "jobs": 12}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ประทาย", "jobs": 20}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ปะคำ", "jobs": 3}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ปะคำ", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ปักธงชัย", "jobs": 5}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ปักธงชัย", "jobs": 5}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ปักธงชัย", "jobs": 2}, {"employee": "นายสุธน ตอทองหลาง", "district": "ปักธงชัย", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ปากช่อง", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ปากช่อง", "jobs": 1}, {"employee": "นายสุธน ตอทองหลาง", "district": "ปากช่อง", "jobs": 35}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "พยัคฆภูมิพิสัย", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "พระทองคำ", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "พระทองคำ", "jobs": 1}, {"employee": "นายนฤดล จำปีกาง", "district": "พระทองคำ", "jobs": 7}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "พิมาย", "jobs": 2}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "พิมาย", "jobs": 74}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "พิมาย", "jobs": 44}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "พุทไธสง", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "เพ็ญ", "jobs": 1}, {"employee": "นายสุธน ตอทองหลาง", "district": "มวกเหล็ก", "jobs": 5}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "เมืองชัยภูมิ", "jobs": 1}, {"employee": "นายนฤดล จำปีกาง", "district": "เมืองชัยภูมิ", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "เมืองชัยภูมิ", "jobs": 2}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "เมืองนครราชสีมา", "jobs": 55}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "เมืองนครราชสีมา", "jobs": 53}, {"employee": "นายนฤดล จำปีกาง", "district": "เมืองนครราชสีมา", "jobs": 3}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "เมืองนครราชสีมา", "jobs": 30}, {"employee": "นายสุธน ตอทองหลาง", "district": "เมืองนครราชสีมา", "jobs": 26}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "เมืองบุรีรัมย์", "jobs": 5}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "เมืองยาง", "jobs": 3}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "เมืองยาง", "jobs": 8}, {"employee": "นายสุธน ตอทองหลาง", "district": "เมืองยาง", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "เมืองระยอง", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "เมืองสระแก้ว", "jobs": 1}, {"employee": "นายสุธน ตอทองหลาง", "district": "เมืองสระบุรี", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ละหานทราย", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ละหานทราย", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ลำทะเมนชัย", "jobs": 27}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ลำทะเมนชัย", "jobs": 23}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ลำปลายมาศ", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ลำปลายมาศ", "jobs": 2}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ลำปลายมาศ", "jobs": 5}, {"employee": "นายนฤดล จำปีกาง", "district": "ลำสนธิ", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "วังน้ำเขียว", "jobs": 4}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "วังน้ำเขียว", "jobs": 1}, {"employee": "นายสุธน ตอทองหลาง", "district": "วังน้ำเขียว", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "แวงน้อย", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "สตึก", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "สตึก", "jobs": 3}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "สนามชัยเขต", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "สีคิ้ว", "jobs": 4}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "สีคิ้ว", "jobs": 1}, {"employee": "นายนฤดล จำปีกาง", "district": "สีคิ้ว", "jobs": 15}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "สีคิ้ว", "jobs": 1}, {"employee": "นายสุธน ตอทองหลาง", "district": "สีคิ้ว", "jobs": 51}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "สีดา", "jobs": 3}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "สีดา", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "สีดา", "jobs": 2}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "สูงเนิน", "jobs": 4}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "สูงเนิน", "jobs": 2}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "สูงเนิน", "jobs": 3}, {"employee": "นายสุธน ตอทองหลาง", "district": "สูงเนิน", "jobs": 22}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "เสิงสาง", "jobs": 18}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "เสิงสาง", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "เสิงสาง", "jobs": 1}, {"employee": "นายสุธน ตอทองหลาง", "district": "เสิงสาง", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "หนองกี่", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "หนองกี่", "jobs": 1}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "หนองบุญมาก", "jobs": 5}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "หนองบุญมาก", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "หนองบุญมาก", "jobs": 3}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "หนองหงส์", "jobs": 2}, {"employee": "นางสาวอมิตา หนูอ้น", "district": "ห้วยแถลง", "jobs": 1}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ห้วยแถลง", "jobs": 11}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ห้วยแถลง", "jobs": 9}, {"employee": "นายกิจจา บรรดาศักดิ์", "district": "ห้วยราช", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "ห้วยราช", "jobs": 1}, {"employee": "นายบรรดิษฐ์ มาชุมแสง", "district": "อุทัย", "jobs": 1}];
+/* shim: จำลอง API ของ dash ให้หน้านี้รันนอก Claude ได้ (อ่านข้อมูลจาก jobs.json ที่ฝังไว้ด้านล่าง) */
+window.dash=(function(){
+  const store={}, calcs={}, draws=[];
+  function get(id){
+    if(store[id]) return store[id];
+    if(id==='jobs') return store.jobs={status:'ok',data:JOBS};
+    const c=calcs[id]; if(!c) return {status:'missing',data:[]};
+    return store[id]={status:'ok',data:c.fn(...c.inputs.map(i=>get(i).data))};
+  }
+  function run(){ draws.forEach(([n,fn])=>document.querySelectorAll('[data-draw="'+n+'"]').forEach(el=>fn(el))); }
+  let t; window.addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(run,150);});
+  return {colors:['#3b6ea5'],data:get,calc:(id,o)=>{calcs[id]=o;},draw:(n,fn)=>{draws.push([n,fn]);},run};
+})();
+</script>
+<script>
+
+const SHORT = n => String(n).replace(/^(นางสาว|นาย|นาง)/,'').split(' ')[0];
+const COL = () => 'var(--wl-acc)';
+(function(){
+  const root=document.querySelector('.wl'); const sel=document.getElementById('themeSel');
+  if(!root) return;
+  if(dash.colors&&dash.colors[0]) root.style.setProperty('--wl-base',dash.colors[0]);
+  const apply=v=>{root.className='wl'+(v?' wl-t-'+v:'');};
+  let saved=''; try{saved=localStorage.getItem('wl-theme')||'';}catch(e){}
+  if(sel){
+    if(saved&&[...sel.options].some(o=>o.value===saved)){sel.value=saved;apply(saved);}
+    sel.addEventListener('change',()=>{apply(sel.value);try{localStorage.setItem('wl-theme',sel.value);}catch(e){}});
+  }
+})();
+
+dash.calc('byDist',{inputs:['jobs'],title:'สรุปรายอำเภอ',description:'สัญญารวมต่ออำเภอ จำนวนพนักงานที่ลง และสัดส่วนของผู้ถือมากสุด',
+fn:(jobs)=>{
+  const m=new Map();
+  for(const r of jobs){const n=Number(r.jobs); if(!m.has(r.district)) m.set(r.district,[]); m.get(r.district).push({e:r.employee,n});}
+  return [...m].map(([district,a])=>{
+    a.sort((x,y)=>y.n-x.n);
+    const total=a.reduce((s,x)=>s+x.n,0);
+    return {district,total,owners:a.length,topOwner:a[0].e,topShare:Math.round(100*a[0].n/total),
+      ownersList:a.map(x=>x.e.replace(/^(นางสาว|นาย|นาง)/,'').split(' ')[0]+' '+x.n).join(' · ')};
+  }).sort((x,y)=>y.total-x.total);
+}});
+
+dash.calc('byEmp',{inputs:['jobs'],title:'สรุปรายพนักงาน',description:'สัญญา ความกว้างของพื้นที่ ความเข้มข้น และอำเภอที่ลงน้อย (≤2 สัญญา) ต่อพนักงาน',
+fn:(jobs)=>{
+  const TAIL=2; const by=new Map(); let total=0;
+  for(const r of jobs){const n=Number(r.jobs); total+=n; if(!by.has(r.employee)) by.set(r.employee,[]); by.get(r.employee).push({d:r.district,n});}
+  const avg=total/by.size;
+  return [...by].map(([employee,a])=>{
+    a.sort((x,y)=>y.n-x.n);
+    const j=a.reduce((s,x)=>s+x.n,0);
+    const t3=a.slice(0,3).reduce((s,x)=>s+x.n,0);
+    const tail=a.filter(x=>x.n<=TAIL);
+    return {employee,jobs:j,vsAvg:Math.round(100*(j-avg)/avg),districts:a.length,jobsPerDistrict:Math.round(10*j/a.length)/10,
+      top3Share:Math.round(100*t3/j),topDistrict:a[0].d,topShare:Math.round(100*a[0].n/j),
+      tailDistricts:tail.length,tailJobs:tail.reduce((s,x)=>s+x.n,0)};
+  }).sort((x,y)=>y.jobs-x.jobs);
+}});
+
+dash.calc('owners',{inputs:['byDist'],title:'อำเภอแยกตามจำนวนคนที่ลง',description:'จำนวนอำเภอและสัญญาในแต่ละกลุ่มตามจำนวนพนักงานที่ลง',
+fn:(dist)=>[1,2,3,4,5].map(k=>{const r=dist.filter(d=>d.owners===k);return {owners:String(k),districts:r.length,jobs:r.reduce((s,d)=>s+d.total,0)};})});
+
+dash.calc('sizes',{inputs:['byDist'],title:'อำเภอแยกตามขนาดงาน',description:'จำนวนอำเภอและสัญญาตามช่วงงานรวมของอำเภอ',
+fn:(dist)=>[['1–2',1,2],['3–5',3,5],['6–20',6,20],['21–50',21,50],['>50',51,1e9]].map(([label,lo,hi])=>{
+  const r=dist.filter(d=>d.total>=lo&&d.total<=hi);return {size:label,districts:r.length,jobs:r.reduce((s,d)=>s+d.total,0)};})});
+
+dash.calc('summary',{inputs:['byEmp','byDist'],title:'ตัวเลขสรุป',description:'ภาพรวมการจ่ายงาน ความไม่สมดุล และการซ้อนทับ',
+fn:(emp,dist)=>{
+  const total=emp.reduce((s,e)=>s+e.jobs,0), avg=total/emp.length;
+  const mx=emp[0], mn=emp[emp.length-1];
+  const nm=n=>n.replace(/^(นางสาว|นาย|นาง)/,'').split(' ')[0];
+  const sg=v=>(v>0?'+':'')+v;
+  const tail=dist.filter(d=>d.total<=5);
+  const tailJobs=tail.reduce((s,d)=>s+d.total,0);
+  const ov=dist.filter(d=>d.owners>=3);
+  const maxD=Math.max(...emp.map(e=>e.districts)), minD=Math.min(...emp.map(e=>e.districts));
+  return [{nEmp:emp.length,total,nDist:dist.length,avg:Math.round(avg),
+    maxName:nm(mx.employee),maxJobs:mx.jobs,maxVsAvg:sg(mx.vsAvg),minName:nm(mn.employee),minJobs:mn.jobs,minVsAvg:sg(mn.vsAvg),
+    ratio:Math.round(10*mx.jobs/mn.jobs)/10,
+    topTwoShare:Math.round(100*(emp[0].jobs+emp[1].jobs)/total),
+    overlapN:ov.length,overlapPct:Math.round(100*ov.length/dist.length),
+    owners5:dist.filter(d=>d.owners===5).length,
+    smallMulti:ov.filter(d=>d.total<=15).length,
+    tailN:tail.length,tailJobs,tailPct:Math.round(100*tailJobs/total),
+    top10Share:Math.round(100*dist.slice(0,10).reduce((s,d)=>s+d.total,0)/total)}];
+}});
+
+// helpers
+function ready(el,...ids){
+  const out=[];
+  for(const i of ids){
+    const g=dash.data(i);
+    if(g.status==='error'||g.status==='missing'){el.textContent='โหลดข้อมูลส่วนนี้ไม่สำเร็จ';return null;}
+    if(g.status!=='ok'||!g.data||!g.data.length){el.textContent='—';return null;}
+    out.push(g.data);
+  }
+  return out;
+}
+function mkTip(el){
+  const t=d3.select(el).append('div').attr('class','wl-tip');
+  return {show(ev,txt){
+    t.text(txt).style('display','block');
+    const r=el.getBoundingClientRect(), w=t.node().offsetWidth;
+    let x=ev.clientX-r.left+12; if(x+w>el.clientWidth) x=Math.max(0,ev.clientX-r.left-w-12);
+    t.style('left',x+'px').style('top',(ev.clientY-r.top+12)+'px');
+  },hide(){t.style('display','none');}};
+}
+
+dash.draw('val',(el)=>{
+  const g=dash.data(el.dataset.source);
+  const row=g.status==='ok'&&g.data&&g.data[0];
+  const v=row?row[el.dataset.field]:null;
+  el.textContent=v==null?'—':String(v);
+});
+
+dash.draw('barEmp',(el)=>{
+  const d=ready(el,'byEmp','summary'); if(!d) return;
+  const rows=d[0], avg=d[1][0].avg;
+  const W=el.clientWidth||500, rowH=46, mL=90, mR=110, H=rows.length*rowH+36;
+  el.replaceChildren();
+  const svg=d3.select(el).append('svg').attr('width',W).attr('height',H).attr('role','img')
+    .attr('aria-label','แท่งแสดงจำนวนสัญญาของพนักงานแต่ละคน เทียบกับค่าเฉลี่ย');
+  const x=d3.scaleLinear().domain([0,d3.max(rows,r=>r.jobs)]).range([0,Math.max(60,W-mL-mR)]);
+  const tip=mkTip(el);
+  const g=svg.append('g').attr('transform',`translate(${mL},22)`);
+  rows.forEach((r,i)=>{
+    const y=i*rowH;
+    g.append('text').attr('x',-8).attr('y',y+rowH/2).attr('dy','0.35em').attr('text-anchor','end').style('font-size','13px').style('fill','var(--color-fg)').text(SHORT(r.employee));
+    g.append('rect').attr('x',0).attr('y',y+6).attr('height',rowH-14).attr('rx',3).attr('width',x(r.jobs))
+      .style('fill',r.jobs>avg?COL():'var(--cds-chart-muted)')
+      .on('mousemove',ev=>tip.show(ev,`${r.employee}\n${r.jobs} สัญญา ใน ${r.districts} อำเภอ\nเทียบค่าเฉลี่ย ${r.vsAvg>0?'+':''}${r.vsAvg}%`)).on('mouseleave',()=>tip.hide());
+    g.append('text').attr('x',x(r.jobs)+6).attr('y',y+rowH/2).attr('dy','0.35em').style('font-size','12px').style('font-variant-numeric','tabular-nums').style('fill','var(--cds-text-secondary)')
+      .text(`${r.jobs} (${r.vsAvg>0?'+':''}${r.vsAvg}%)`);
+  });
+  g.append('line').attr('x1',x(avg)).attr('x2',x(avg)).attr('y1',-6).attr('y2',rows.length*rowH).style('stroke','var(--cds-chart-reference)').style('stroke-dasharray','4 3');
+  g.append('text').attr('x',x(avg)).attr('y',-10).attr('text-anchor','middle').style('font-size','11px').style('fill','var(--cds-text-secondary)').text(`ค่าเฉลี่ย ${avg}`);
+});
+
+dash.draw('heat',(el)=>{
+  const d=ready(el,'jobs','byEmp','byDist'); if(!d) return;
+  const [jobs,emp,dist]=d;
+  const N=12, top=dist.slice(0,N).map(r=>r.district);
+  const cols=emp.map(e=>e.employee);
+  const cell=new Map();
+  for(const r of jobs){const row=top.includes(r.district)?r.district:'__o';const k=row+'|'+r.employee;cell.set(k,(cell.get(k)||0)+Number(r.jobs));}
+  const rows=[...top,'__o'];
+  const rest=dist.length-N;
+  const W=el.clientWidth||500, mL=Math.min(150,Math.max(100,W*0.3)), mT=34, rH=28, cw=(W-mL-4)/cols.length;
+  const max=d3.max([...cell].filter(([k])=>!k.startsWith('__o')).map(([,v])=>v));
+  el.replaceChildren();
+  const svg=d3.select(el).append('svg').attr('width',W).attr('height',mT+rows.length*rH+4).attr('role','img')
+    .attr('aria-label','ตารางสีแสดงจำนวนสัญญาของพนักงานแต่ละคนในแต่ละอำเภอ');
+  const tip=mkTip(el);
+  cols.forEach((c,j)=>svg.append('text').attr('x',mL+j*cw+cw/2).attr('y',mT-12).attr('text-anchor','middle').style('font-size','12px').style('fill','var(--cds-text-secondary)').text(SHORT(c)));
+  rows.forEach((rw,i)=>{
+    const y=mT+i*rH;
+    svg.append('text').attr('x',mL-8).attr('y',y+rH/2).attr('dy','0.35em').attr('text-anchor','end').style('font-size','12px').style('fill','var(--color-fg)').text(rw==='__o'?`อีก ${rest} อำเภอ`:rw);
+    cols.forEach((c,j)=>{
+      const v=cell.get(rw+'|'+c)||0;
+      const g=svg.append('g');
+      g.append('rect').attr('x',mL+j*cw+1).attr('y',y+1).attr('width',cw-2).attr('height',rH-2).attr('rx',3)
+        .style('fill',v?COL():'transparent').style('fill-opacity',v?(rw==='__o'?0.18:0.12+0.5*Math.sqrt(v/max)):0)
+        .style('stroke','var(--color-border-line)')
+        .on('mousemove',ev=>tip.show(ev,`${rw==='__o'?'อำเภออื่น ๆ รวม':rw}\n${c}: ${v} สัญญา`)).on('mouseleave',()=>tip.hide());
+      if(v) g.append('text').attr('x',mL+j*cw+cw/2).attr('y',y+rH/2).attr('dy','0.35em').attr('text-anchor','middle').style('font-size','12px').style('font-variant-numeric','tabular-nums').style('fill','var(--color-fg)').style('pointer-events','none').text(v);
+    });
+  });
+});
+
+function vbars(el,rows,lk,vk,unit,xtitle){
+  const W=el.clientWidth||320,H=220,m={t:22,r:6,b:44,l:6};
+  el.replaceChildren();
+  const svg=d3.select(el).append('svg').attr('width',W).attr('height',H).attr('role','img').attr('aria-label',xtitle);
+  const x=d3.scaleBand().domain(rows.map(r=>r[lk])).range([m.l,W-m.r]).padding(0.25);
+  const y=d3.scaleLinear().domain([0,d3.max(rows,r=>r[vk])]).range([H-m.b,m.t]);
+  const tip=mkTip(el);
+  rows.forEach(r=>{
+    svg.append('rect').attr('x',x(r[lk])).attr('y',y(r[vk])).attr('width',x.bandwidth()).attr('height',Math.max(0,H-m.b-y(r[vk]))).attr('rx',3).style('fill',COL())
+      .on('mousemove',ev=>tip.show(ev,`${r[lk]}: ${r.districts} อำเภอ\nรวม ${r.jobs} สัญญา`)).on('mouseleave',()=>tip.hide());
+    svg.append('text').attr('x',x(r[lk])+x.bandwidth()/2).attr('y',y(r[vk])-6).attr('text-anchor','middle').style('font-size','12px').style('font-variant-numeric','tabular-nums').style('fill','var(--color-fg)').text(r[vk]);
+    svg.append('text').attr('x',x(r[lk])+x.bandwidth()/2).attr('y',H-m.b+16).attr('text-anchor','middle').style('font-size','12px').style('fill','var(--cds-text-secondary)').text(r[lk]);
+  });
+  svg.append('text').attr('x',W/2).attr('y',H-8).attr('text-anchor','middle').style('font-size','11px').style('fill','var(--cds-text-secondary)').text(xtitle);
+}
+dash.draw('barOwners',(el)=>{const d=ready(el,'owners');if(!d)return;vbars(el,d[0],'owners','districts','อำเภอ','จำนวนพนักงานที่ลงในอำเภอ (คน)');});
+dash.draw('barSize',(el)=>{const d=ready(el,'sizes');if(!d)return;vbars(el,d[0],'size','districts','อำเภอ','สัญญารวมของอำเภอ');});
+
+function fillRows(el,rows,cols,textCols){
+  el.replaceChildren(...rows.map(r=>{
+    const tr=document.createElement('tr');
+    for(const c of cols){const td=document.createElement('td');td.textContent=String(r[c]);if(!textCols.includes(c))td.className='num';tr.appendChild(td);}
+    return tr;
+  }));
+}
+dash.draw('empRows',(el)=>{const g=dash.data('byEmp');if(g.status!=='ok'){el.replaceChildren();return;}
+  fillRows(el,g.data,['employee','jobs','vsAvg','districts','jobsPerDistrict','top3Share','topDistrict','topShare','tailDistricts','tailJobs'],['employee','topDistrict']);});
+dash.calc('pareto',{inputs:['byDist'],title:'สัญญาสะสมตามอำเภอ',description:'อำเภอเรียงตามสัญญามาก→น้อย พร้อมสัดส่วนสะสม (%)',
+fn:(dist)=>{const t=dist.reduce((s,d)=>s+d.total,0);let c=0;
+  return dist.map((d,i)=>{c+=d.total;return {rank:i+1,district:d.district,total:d.total,cum:Math.round(1000*c/t)/10};});}});
+
+dash.calc('mix',{inputs:['jobs','byDist'],title:'โครงสร้างงานตามขนาดอำเภอ',description:'สัญญาของแต่ละคนในอำเภอใหญ่ (>50) กลาง (6–50) และเล็ก (≤5)',
+fn:(jobs,dist)=>{
+  const size=new Map(dist.map(d=>[d.district,d.total])); const m=new Map();
+  for(const r of jobs){const n=Number(r.jobs),s=size.get(r.district);
+    if(!m.has(r.employee)) m.set(r.employee,{employee:r.employee,big:0,mid:0,small:0,total:0});
+    const o=m.get(r.employee); o.total+=n; if(s>50) o.big+=n; else if(s>5) o.mid+=n; else o.small+=n;}
+  return [...m.values()].sort((a,b)=>b.total-a.total);
+}});
+
+dash.draw('pareto',(el)=>{
+  const d=ready(el,'pareto'); if(!d) return; const rows=d[0];
+  const W=el.clientWidth||360,H=240,m={t:14,r:34,b:36,l:34};
+  el.replaceChildren();
+  const svg=d3.select(el).append('svg').attr('width',W).attr('height',H).attr('role','img').attr('aria-label','Pareto แสดงสัญญาต่ออำเภอและสัดส่วนสะสม');
+  const x=d3.scaleBand().domain(rows.map(r=>r.rank)).range([m.l,W-m.r]).padding(0.15);
+  const y=d3.scaleLinear().domain([0,d3.max(rows,r=>r.total)]).nice().range([H-m.b,m.t]);
+  const y2=d3.scaleLinear().domain([0,100]).range([H-m.b,m.t]);
+  const tip=mkTip(el);
+  svg.append('g').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4)).call(g=>g.select('.domain').remove()).selectAll('text').style('fill','var(--cds-text-secondary)').style('font-size','11px');
+  svg.append('g').attr('transform',`translate(${W-m.r},0)`).call(d3.axisRight(y2).tickValues([0,25,50,80,100]).tickFormat(v=>v+'%')).call(g=>g.select('.domain').remove()).selectAll('text').style('fill','var(--cds-text-secondary)').style('font-size','11px');
+  svg.append('line').attr('x1',m.l).attr('x2',W-m.r).attr('y1',y2(80)).attr('y2',y2(80)).style('stroke','var(--cds-chart-reference)').style('stroke-dasharray','4 3');
+  rows.forEach(r=>svg.append('rect').attr('x',x(r.rank)).attr('y',y(r.total)).attr('width',x.bandwidth()).attr('height',H-m.b-y(r.total)).style('fill',COL()).style('fill-opacity',0.8));
+  svg.append('path').attr('fill','none').style('stroke','var(--color-fg)').attr('stroke-width',1.6).attr('d',d3.line().x(r=>x(r.rank)+x.bandwidth()/2).y(r=>y2(r.cum))(rows));
+  rows.forEach(r=>svg.append('rect').attr('x',x(r.rank)).attr('y',m.t).attr('width',x.bandwidth()).attr('height',H-m.b-m.t).style('fill','transparent')
+    .on('mousemove',ev=>tip.show(ev,`อันดับ ${r.rank}: ${r.district}\n${r.total} สัญญา\nสะสม ${r.cum}%`)).on('mouseleave',()=>tip.hide()));
+  svg.append('text').attr('x',(m.l+W-m.r)/2).attr('y',H-8).attr('text-anchor','middle').style('font-size','11px').style('fill','var(--cds-text-secondary)').text('อำเภอ (เรียงจากงานมากไปน้อย)');
+});
+
+dash.draw('mix',(el)=>{
+  const d=ready(el,'mix'); if(!d) return; const rows=d[0];
+  const W=el.clientWidth||360,rowH=44,mL=70,mR=10,H=rows.length*rowH+8;
+  el.replaceChildren();
+  const svg=d3.select(el).append('svg').attr('width',W).attr('height',H).attr('role','img').attr('aria-label','แท่งซ้อนแสดงสัดส่วนงานของแต่ละคนในอำเภอใหญ่ กลาง และเล็ก');
+  const x=d3.scaleLinear().domain([0,d3.max(rows,r=>r.total)]).range([0,W-mL-mR]);
+  const tip=mkTip(el);
+  const seg=[['big',1,'ใหญ่'],['mid',0.55,'กลาง'],['small',0.25,'เล็ก']];
+  rows.forEach((r,i)=>{
+    const y=i*rowH+4; let off=0;
+    svg.append('text').attr('x',mL-8).attr('y',y+rowH/2-4).attr('dy','0.35em').attr('text-anchor','end').style('font-size','13px').style('fill','var(--color-fg)').text(SHORT(r.employee));
+    seg.forEach(([k,op,lab])=>{
+      const w=x(r[k]); if(w<=0) return;
+      svg.append('rect').attr('x',mL+off).attr('y',y).attr('width',w).attr('height',rowH-14).style('fill',COL()).style('fill-opacity',op).style('stroke','var(--color-bg)')
+        .on('mousemove',ev=>tip.show(ev,`${r.employee}\nอำเภอ${lab}: ${r[k]} สัญญา (${Math.round(100*r[k]/r.total)}% ของงานตน)`)).on('mouseleave',()=>tip.hide());
+      if(w>26) svg.append('text').attr('x',mL+off+w/2).attr('y',y+(rowH-14)/2).attr('dy','0.35em').attr('text-anchor','middle').style('font-size','12px').style('font-variant-numeric','tabular-nums').style('fill',k==='big'?'#fff':'var(--color-fg)').style('pointer-events','none').text(r[k]);
+      off+=w;
+    });
+  });
+});
+
+dash.draw('overlapRows',(el)=>{const g=dash.data('byDist');if(g.status!=='ok'){el.replaceChildren();return;}
+  fillRows(el,g.data.filter(r=>r.owners>=3),['district','total','owners','topOwner','topShare','ownersList'],['district','topOwner','ownersList']);});
+
+dash.run();
+</script>
+</body>
+</html>
